@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/geometry-kernel"]
+members = ["crates/geometry-kernel", "crates/domain-contracts"]
 resolver = "2"
 
 [workspace.package]
