@@ -10,10 +10,10 @@ import type {
   RegisterSourceGeometryInput,
   RevisionState,
   SourceGeometry,
-  SourceSystem,
   StartImportJobInput,
 } from "./contracts.js";
-import { deriveRevisionState, emptyImpactSummary } from "./contracts.js";
+import { buildDefaultImportDiagnostics, deriveRevisionState, emptyImpactSummary } from "./contracts.js";
+import type { CompleteImportJobResult, IStateStore } from "./repository.js";
 
 type RevisionRecord = DesignRevision & {
   importJobIds: string[];
@@ -24,13 +24,13 @@ function now(): string {
   return new Date().toISOString();
 }
 
-export class StateStore {
+export class StateStore implements IStateStore {
   private readonly projects = new Map<string, Project>();
   private readonly revisions = new Map<string, RevisionRecord>();
   private readonly sourceGeometries = new Map<string, SourceGeometry>();
   private readonly importJobs = new Map<string, ImportJob>();
 
-  createProject(input: CreateProjectInput): Project {
+  async createProject(input: CreateProjectInput): Promise<Project> {
     const project: Project = {
       projectId: `proj_${Date.now()}`,
       name: input.name,
@@ -45,11 +45,11 @@ export class StateStore {
     return project;
   }
 
-  listProjects(): Project[] {
+  async listProjects(): Promise<Project[]> {
     return Array.from(this.projects.values());
   }
 
-  createRevision(request: CreateRevisionInput): DesignRevision {
+  async createRevision(request: CreateRevisionInput): Promise<DesignRevision> {
     const project = this.projects.get(request.projectId);
     if (!project) {
       throw new Error(`Project not found: ${request.projectId}`);
@@ -78,18 +78,18 @@ export class StateStore {
     return this.toRevision(revision);
   }
 
-  listRevisions(projectId: string): DesignRevision[] {
+  async listRevisions(projectId: string): Promise<DesignRevision[]> {
     return Array.from(this.revisions.values())
       .filter((revision) => revision.projectId === projectId)
       .map((revision) => this.toRevision(revision));
   }
 
-  getRevision(revisionId: string): DesignRevision | undefined {
+  async getRevision(revisionId: string): Promise<DesignRevision | undefined> {
     const revision = this.revisions.get(revisionId);
     return revision ? this.toRevision(revision) : undefined;
   }
 
-  updateRevisionState(revisionId: string, nextState: RevisionState): DesignRevision | undefined {
+  async updateRevisionState(revisionId: string, nextState: RevisionState): Promise<DesignRevision | undefined> {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return undefined;
@@ -99,7 +99,7 @@ export class StateStore {
     return this.toRevision(revision);
   }
 
-  promoteRevision(revisionId: string, nextState: RevisionState): DesignRevision | undefined {
+  async promoteRevision(revisionId: string, nextState: RevisionState): Promise<DesignRevision | undefined> {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return undefined;
@@ -109,7 +109,7 @@ export class StateStore {
     return this.toRevision(revision);
   }
 
-  registerSourceGeometry(request: RegisterSourceGeometryInput): SourceGeometry {
+  async registerSourceGeometry(request: RegisterSourceGeometryInput): Promise<SourceGeometry> {
     const revision = this.revisions.get(request.revisionId);
     if (!revision) {
       throw new Error(`Revision not found: ${request.revisionId}`);
@@ -135,7 +135,7 @@ export class StateStore {
     return sourceGeometry;
   }
 
-  listRevisionSourceGeometries(revisionId: string): SourceGeometry[] {
+  async listRevisionSourceGeometries(revisionId: string): Promise<SourceGeometry[]> {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return [];
@@ -146,17 +146,17 @@ export class StateStore {
       .filter((geometry): geometry is SourceGeometry => Boolean(geometry));
   }
 
-  getSourceGeometry(sourceGeometryId: string): SourceGeometry | undefined {
+  async getSourceGeometry(sourceGeometryId: string): Promise<SourceGeometry | undefined> {
     return this.sourceGeometries.get(sourceGeometryId);
   }
 
-  startImportJob(
+  async startImportJob(
     request: StartImportJobInput & {
       jobId: string;
       projectId: string;
       revisionId: string;
     },
-  ): ImportJob | undefined {
+  ): Promise<ImportJob | undefined> {
     const revision = this.revisions.get(request.revisionId);
     const geometry = this.sourceGeometries.get(request.sourceGeometryId);
 
@@ -187,13 +187,13 @@ export class StateStore {
     return importJob;
   }
 
-  completeImportJob(
+  async completeImportJob(
     importJobId: string,
     update: {
       status: JobStatus;
       progressPercent: number;
     },
-  ): (ImportJob & { importStatus: ImportStatus }) | undefined {
+  ): Promise<CompleteImportJobResult | undefined> {
     const job = this.importJobs.get(importJobId);
     if (!job) {
       return undefined;
@@ -222,9 +222,8 @@ export class StateStore {
 
     const revision = this.revisions.get(job.revisionId);
     if (revision) {
-      revision.state = deriveRevisionState(
-        this.listRevisionSourceGeometries(revision.revisionId),
-      );
+      const geometries = await this.listRevisionSourceGeometries(revision.revisionId);
+      revision.state = deriveRevisionState(geometries);
     }
 
     return {
@@ -233,11 +232,11 @@ export class StateStore {
     };
   }
 
-  getImportJob(jobId: string): ImportJob | undefined {
+  async getImportJob(jobId: string): Promise<ImportJob | undefined> {
     return this.importJobs.get(jobId);
   }
 
-  listRevisionImportJobs(revisionId: string): ImportJob[] {
+  async listRevisionImportJobs(revisionId: string): Promise<ImportJob[]> {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return [];
@@ -248,12 +247,12 @@ export class StateStore {
       .filter((job): job is ImportJob => Boolean(job));
   }
 
-  getRevisionDetail(revisionId: string): {
+  async getRevisionDetail(revisionId: string): Promise<{
     revision: DesignRevision;
     project: Project;
     sourceGeometries: SourceGeometry[];
     importJobs: ImportJob[];
-  } | undefined {
+  } | undefined> {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return undefined;
@@ -267,23 +266,27 @@ export class StateStore {
     return {
       revision: this.toRevision(revision),
       project,
-      sourceGeometries: this.listRevisionSourceGeometries(revisionId),
-      importJobs: this.listRevisionImportJobs(revisionId),
+      sourceGeometries: await this.listRevisionSourceGeometries(revisionId),
+      importJobs: await this.listRevisionImportJobs(revisionId),
     };
   }
 
-  getSystemSnapshot(): {
+  async getSystemSnapshot(): Promise<{
     projects: Project[];
     revisions: DesignRevision[];
     sourceGeometries: SourceGeometry[];
     importJobs: ImportJob[];
-  } {
+  }> {
     return {
-      projects: this.listProjects(),
+      projects: await this.listProjects(),
       revisions: Array.from(this.revisions.values()).map((revision) => this.toRevision(revision)),
       sourceGeometries: Array.from(this.sourceGeometries.values()),
       importJobs: Array.from(this.importJobs.values()),
     };
+  }
+
+  async close(): Promise<void> {
+    // No-op for in-memory store
   }
 
   private toRevision(revision: RevisionRecord): DesignRevision {
@@ -311,39 +314,5 @@ export class StateStore {
       default:
         return "pending";
     }
-  }
-}
-
-export function buildDefaultImportDiagnostics(
-  sourceSystem: SourceSystem,
-): ImportDiagnostic[] {
-  switch (sourceSystem) {
-    case "zbrush":
-      return [
-        {
-          code: "ZB_IMPORT_COMPLETED",
-          severity: "info",
-          message: "ZBrush-origin geometry normalized into a placeholder internal mesh artifact.",
-          pathHint: null,
-          remediationHint: null,
-        },
-        {
-          code: "ZB_UNIT_ASSUMED_MM",
-          severity: "warning",
-          message: "No explicit ZBrush unit metadata detected; defaulting to millimeters.",
-          pathHint: null,
-          remediationHint: "Confirm import scale before downstream decomposition.",
-        },
-      ];
-    default:
-      return [
-        {
-          code: "IMPORT_COMPLETED",
-          severity: "info",
-          message: "Source geometry registered and placeholder import normalization completed.",
-          pathHint: null,
-          remediationHint: null,
-        },
-      ];
   }
 }

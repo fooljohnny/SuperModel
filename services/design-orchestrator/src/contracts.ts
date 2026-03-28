@@ -106,3 +106,37 @@ export function mapJobStatusToImportStatus(status: ImportJob["status"]): ImportS
       return "pending";
   }
 }
+
+export function buildDefaultImportDiagnostics(
+  sourceSystem: SourceGeometry["sourceSystem"],
+): ImportDiagnostic[] {
+  switch (sourceSystem) {
+    case "zbrush":
+      return [
+        {
+          code: "ZB_IMPORT_COMPLETED",
+          severity: "info",
+          message: "ZBrush-origin geometry normalized into a placeholder internal mesh artifact.",
+          pathHint: null,
+          remediationHint: null,
+        },
+        {
+          code: "ZB_UNIT_ASSUMED_MM",
+          severity: "warning",
+          message: "No explicit ZBrush unit metadata detected; defaulting to millimeters.",
+          pathHint: null,
+          remediationHint: "Confirm import scale before downstream decomposition.",
+        },
+      ];
+    default:
+      return [
+        {
+          code: "IMPORT_COMPLETED",
+          severity: "info",
+          message: "Source geometry registered and placeholder import normalization completed.",
+          pathHint: null,
+          remediationHint: null,
+        },
+      ];
+  }
+}
