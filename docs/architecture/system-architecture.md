@@ -7,6 +7,15 @@ lifecycle of plastic model kit development, from concept-ready geometry to
 runner output, moldability verification, manufacturing feedback, and assembly
 instruction generation.
 
+This first product strategy is now explicitly optimized for:
+
+- structural decomposition and part-splitting workflows as the first priority
+- a professional desktop product for studios and advanced creators, paired with
+  SaaS-style collaboration and review capabilities
+- deep CAE/manufacturing integration rather than heuristic-only simulation
+- first-release outputs focused on part-structure data, runner-sheet data, and
+  CNC or mold-processing handoff packages
+
 The architecture must support:
 
 - heavy desktop authoring workflows with local acceleration
@@ -74,6 +83,8 @@ Why:
 - one codebase across Windows/Linux/macOS
 - Rust integration is natural for geometry and performance-sensitive modules
 - smaller deployment footprint than Electron
+- aligns with a desktop-first professional product strategy for advanced
+  creators and model studios
 
 ### WebApp
 
@@ -106,6 +117,17 @@ Why Rust:
 ## 4.3 CAD and geometry interoperability
 
 - **Preferred geometry foundation**: OpenCascade ecosystem
+- **Import/edit priority order**:
+  1. ZBrush-origin sculpt data
+  2. SolidWorks
+  3. Siemens NX
+  4. Blender
+  5. Maya
+  6. STEP
+  7. Parasolid
+  8. IGES
+  9. FBX
+  10. glTF
 - **Interchange targets**:
   - STEP
   - IGES
@@ -119,6 +141,8 @@ Adapter strategy:
 - keep vendor/tool-specific conversion logic at the edges
 - treat SolidWorks/NX data as imported authoritative references when native
   editing is not fully reproducible in the first phase
+- keep sculpt-origin mesh fidelity high enough that ZBrush-led concept work can
+  remain the upstream source for decomposition and structural engineering
 
 ## 4.4 AI / CAE / optimization services
 
@@ -134,6 +158,14 @@ Why Python:
 
 - strongest ecosystem for ML/optimization/CAE orchestration
 - easier integration with scientific computing and model serving stacks
+
+Deployment stance:
+
+- public cloud is acceptable for AI and orchestration workloads
+- the architecture should still preserve a deployable boundary for future
+  private-cloud or on-premise offerings
+- deterministic engineering validation must remain reproducible independent of
+  where AI inference is hosted
 
 ## 4.5 Backend services
 
@@ -166,6 +198,7 @@ Owns:
 - shelling
 - color separation
 - pre-paint segmentation
+- decomposition policies and manufacturable split recommendations
 
 ## 5.3 Connector Engineering
 
@@ -204,6 +237,8 @@ Owns:
 - draft analysis
 - parting line support
 - output for printing/CNC/mold workflows
+- deep CAE adapter orchestration for mold-flow, shrinkage, and manufacturability
+  validation
 
 ## 5.7 Documentation and Manufacturing Output
 
@@ -241,6 +276,17 @@ The internal model should revolve around a few stable entities:
 - `ToolingConstraint`
 - `InstructionSequence`
 - `ManufacturingRevision`
+
+For the first executable slice, the most important entities are:
+
+- `MasterModel`
+- `SplitPlan`
+- `Part`
+- `Connector`
+- `Joint`
+- `MaterialProfile`
+- `RunnerSheet`
+- `ManufacturingPackage`
 
 Supporting principles:
 
@@ -340,11 +386,13 @@ Mitigation:
 
 The best first product slice is:
 
-1. CAD import + assembly/part graph
-2. connector library + semi-automatic connector generation
-3. interference/tolerance workbench
-4. runner-sheet generation MVP
-5. reviewable instruction output
+1. sculpt/CAD import with ZBrush-led concept handoff support
+2. structural decomposition and part graph management
+3. connector library + semi-automatic connector generation
+4. interference/tolerance/kinematics workbench
+5. runner-sheet generation and manufacturing package export
+6. CAE adapter orchestration for manufacturability review
 
 This produces immediate engineering value while building the data backbone needed
-for later AI modeling and mold-flow optimization.
+for later AI modeling, deeper mold-flow optimization, and documentation
+automation.

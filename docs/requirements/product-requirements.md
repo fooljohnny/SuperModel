@@ -6,6 +6,12 @@ Build an industrial-grade design platform for plastic assembly kits and related
 manufactured toy/model products. The platform should compress iteration loops
 from concept to mold-ready engineering data while preserving expert control.
 
+The first release focus is structural decomposition and engineering refinement:
+part splitting, connector structure, tolerance control, runner preparation, and
+manufacturing handoff. Freeform sculpting remains strategically important, but
+it is primarily used to support upstream concept and shape authoring that feeds
+the engineering workbench.
+
 ## 2. Target users
 
 ### Primary users
@@ -23,6 +29,16 @@ from concept to mold-ready engineering data while preserving expert control.
 - Supply-chain and factory partners
 - External reviewers and licensors
 - Hobbyist prosumer creators using a reduced workflow
+
+## 2.1 Commercial posture
+
+The product is aimed at two adjacent customer modes:
+
+- **Professional desktop software for studios and specialist designers**
+- **SaaS collaboration layer for review, workflow coordination, and approvals**
+
+The architecture should therefore support both standalone heavy desktop
+authoring and optional cloud-connected collaboration.
 
 ## 3. Product outcomes
 
@@ -42,10 +58,13 @@ from concept to mold-ready engineering data while preserving expert control.
 - Local-first authoring with optional cloud sync
 - Import/export with industrial CAD and mesh formats
 - Traceable revision history for parts, runners, materials, and instructions
+- Public-cloud deployment is acceptable for AI and collaboration workloads
+  provided that customer projects can control storage and access boundaries
 
 ### L1: Design workbench requirements
 
-- Manual 3D sculpting and hard-surface editing
+- Production-grade manual 3D sculpting with toy/model-oriented hard-surface
+  refinement
 - Parametric part decomposition
 - Standard connector and reinforcement library
 - Automatic connector recommendation and placement
@@ -58,12 +77,14 @@ from concept to mold-ready engineering data while preserving expert control.
 - Material, wall thickness, and shrinkage parameter management
 - Moldability checks: draft, undercut, parting line, ejector feasibility
 - Tolerance analysis and adjustment
-- Mold flow and sink/warpage risk estimation
+- Deep mold-flow and CAE integration, not only heuristic estimation
 - Mold-trial issue feedback loop into geometry rules
 
 ### L3: Output and downstream requirements
 
-- Export part files, runner files, and manufacturing packages
+- Export part structural design data
+- Export runner and board data
+- Export CNC and mold-processing packages
 - Generate assembly instructions with exploded steps and BOM
 - Support 3D printing and CNC-oriented output
 - Generate collaboration views for approvals and vendor handoff
@@ -93,14 +114,18 @@ from concept to mold-ready engineering data while preserving expert control.
 - Desktop shell and web review shell
 - Standard parts library framework
 - Spec-driven documentation and change management
+- CAD interoperability sequence aligned to business value:
+  ZBrush -> SolidWorks -> Siemens NX -> Blender -> Maya ->
+  STEP -> Parasolid -> IGES -> FBX -> glTF
 
 ### Phase B: Engineering MVP
 
+- Structural decomposition workbench
 - Parametric part decomposition
 - Connector library and auto-placement
 - Tolerance/interference analysis
 - Basic runner layout generation
-- Instruction generation MVP
+- Manufacturing export packages for parts, runners, and CNC/mold workflows
 
 ### Phase C: Industrial optimization
 
@@ -117,8 +142,13 @@ from concept to mold-ready engineering data while preserving expert control.
 
 ## 7. Open questions
 
-- Which CAD systems are highest priority for round-trip fidelity?
-- Is manual sculpting expected to be production-grade or concept-grade only?
-- Should cloud collaboration be mandatory or optional for enterprise installs?
-- What level of simulation accuracy is acceptable in-app versus external CAE?
-- Which manufacturing outputs must be generated natively in V1?
+- How deep should native ZBrush-like sculpting go before we integrate external
+  DCC round-tripping?
+- Which parts of SolidWorks and Siemens NX interoperability must support
+  high-fidelity round-trip in early enterprise deployments?
+- Should SaaS collaboration ship in the same release wave as the desktop
+  engineering MVP or immediately after it?
+- Which external CAE and CAM systems should be integrated first for
+  manufacturing-grade simulation and tooling workflows?
+- How much of CNC and mold-processing package generation should be native versus
+  adapter-driven in V1?

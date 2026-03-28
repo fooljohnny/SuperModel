@@ -5,7 +5,7 @@
 SuperModel is an industrial-grade assembly model design platform for plastic
 model kits and adjacent manufacturing workflows. The system must reduce design
 cycle time, lower mold rework costs, and improve consistency from concept to
-runner layout, trial-shot feedback, and assembly instruction output.
+runner layout, trial-shot feedback, and manufacturing handoff.
 
 ## Product principles
 
@@ -16,6 +16,19 @@ runner layout, trial-shot feedback, and assembly instruction output.
 4. Native support for both creative design and DFM/CAE/manufacturing analysis.
 5. Every edit should preserve associativity between concept, parts, connectors,
    runners, and assembly instructions.
+
+## Confirmed strategic decisions
+
+- First product priority: part decomposition and structural engineering.
+- Commercial posture: professional desktop software with SaaS collaboration
+  surfaces for review and orchestration.
+- Manual modeling target: production-grade sculpt-first capability, especially
+  for toy-grade surfaces and character forms.
+- AI deployment: public cloud is acceptable, but deterministic engineering
+  validation remains mandatory.
+- Simulation target: deep CAE integration rather than heuristic-only checks.
+- First-release outputs prioritize structural part design data, runner data,
+  and CNC/tooling manufacturing packages.
 
 ## Initial platform choices
 
@@ -40,6 +53,19 @@ runner layout, trial-shot feedback, and assembly instruction output.
 - Material, shrinkage, and pre-paint parameter management
 - Instruction generation and packaging deliverables
 - Optimization and AI-assisted modeling
+
+## CAD interoperability priority
+
+1. ZBrush
+2. SolidWorks
+3. Siemens NX
+4. Blender
+5. Maya
+6. STEP
+7. Parasolid
+8. IGES
+9. FBX
+10. glTF
 
 ## Constraints
 

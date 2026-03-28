@@ -13,6 +13,20 @@ trial-shot validation, tolerance iteration, and manufacturability optimization.
 
 ## Requirements
 
+### Requirement: Deep CAE integration
+
+The system SHALL support integration with professional mold-flow and tooling
+simulation workflows, and MUST preserve traceable inputs, outputs, and solver
+assumptions for each engineering revision.
+
+#### Scenario: Submit a mold-flow verification job
+
+- **WHEN** an engineer approves a runner candidate and material profile
+- **THEN** the system packages geometry, gates, process assumptions, and material
+  metadata for an external or embedded CAE solver
+- **AND** records the simulation request and returned findings against the active
+  manufacturing revision.
+
 ### Requirement: Runner and sprue planning
 
 The system SHALL allow the user to group parts into runner assemblies with
@@ -57,3 +71,17 @@ verification workflows using industry-compatible formats.
 - **WHEN** the user approves a runner design
 - **THEN** the system generates export packages for tooling workflows
 - **AND** includes geometry, metadata, version, and manufacturing annotations.
+
+### Requirement: First-release output priority
+
+The first release SHALL prioritize manufacturing outputs for structural part
+engineering, runner assemblies, and CNC or mold-processing handoff ahead of
+consumer-facing instruction artifacts.
+
+#### Scenario: Promote a release candidate for factory handoff
+
+- **WHEN** a project reaches first-release readiness
+- **THEN** the system produces exportable part-structure data, runner data, and
+  CNC or mold-processing data as the required deliverables
+- **AND** treats instruction or presentation outputs as optional secondary
+  artifacts.

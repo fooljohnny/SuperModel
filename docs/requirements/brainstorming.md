@@ -5,11 +5,38 @@
 SuperModel should become an industrial design operating system for plastic
 assembly kits. It must connect concept design, 3D authoring, engineering
 refinement, manufacturability analysis, runner planning, mold feedback, and
-assembly instruction generation inside one traceable platform.
+manufacturing output generation inside one traceable platform.
 
 The core business value is not "another DCC" and not "another CAD". The value
 comes from compressing the handoff chain between art, engineering, mold,
-production, and product planning.
+production, and product planning, with the first commercial wedge centered on
+part decomposition and structural engineering.
+
+## Confirmed product strategy
+
+- **First priority workflow**: part decomposition and structural design
+- **Commercial model**: professional desktop software plus SaaS collaboration
+- **Manual modeling goal**: production-grade sculpting close to ZBrush-class
+  workflows
+- **AI deployment**: public-cloud deployment is acceptable
+- **Simulation target**: deep CAE integration rather than heuristic-only checks
+- **V1 outputs to prioritize**:
+  - structural part design data
+  - runner/plate data
+  - CNC / tooling-ready manufacturing packages
+
+## Confirmed interoperability priority
+
+1. ZBrush
+2. SolidWorks
+3. Siemens NX
+4. Blender
+5. Maya
+6. STEP
+7. Parasolid
+8. IGES
+9. FBX
+10. glTF
 
 ## Primary optimization targets
 
@@ -34,8 +61,8 @@ production, and product planning.
 ### 2. Character / styling designer
 
 - Creates shape language, silhouette, proportions, and visual details.
-- Needs direct modeling, sculpt support, references, and AI-assisted concept to
-  3D generation.
+- Needs production-grade sculpt workflows, references, and AI-assisted concept
+  to 3D generation.
 
 ### 3. Structural engineer
 
@@ -58,6 +85,12 @@ production, and product planning.
 
 - Tracks mold revisions, trial-shot issues, and production readiness.
 - Needs change lineage and issue feedback into the design graph.
+
+### 7. Professional studio and SaaS collaboration operator
+
+- Buys the desktop tool for authors while relying on browser workflows for
+  review, approvals, and cross-team coordination.
+- Needs a hybrid licensing and delivery model instead of a browser-only product.
 
 ## Product capability map
 
@@ -103,9 +136,9 @@ production, and product planning.
 ### G. Documentation and delivery
 
 - Automatic assembly step extraction
-- Instruction sheet generation
 - BOM and part-label generation
 - CNC, 3D print, and factory export formats
+- Tooling package generation for CNC and mold review
 
 ### H. Platform intelligence
 
@@ -153,6 +186,7 @@ production, and product planning.
 - Manual connector authoring
 - Tolerance editing
 - Interference and motion validation
+- Export of structural part datasets for downstream CAD and tooling
 
 ### Phase 2 - Manufacturing intelligence
 
@@ -160,6 +194,7 @@ production, and product planning.
 - Runner layout planning
 - Shrinkage and wall-thickness recommendations
 - Trial-shot issue capture and feedback loop
+- CNC / tooling package generation
 
 ### Phase 3 - AI acceleration
 
@@ -174,22 +209,3 @@ production, and product planning.
 - Web review
 - Approval workflows
 - Packaging and release bundles
-
-## Information still needed from you
-
-1. Your expected first release focus:
-   - concept + part splitting
-   - engineering refinement
-   - runner / mold optimization
-   - instruction generation
-2. Your preferred interoperability targets:
-   - SolidWorks
-   - Siemens NX
-   - STEP / Parasolid / IGES
-   - Blender / Maya / FBX / glTF
-3. Whether this product is internal-only, SaaS, or licensed desktop software.
-4. Whether AI generation must run on-premise for IP protection.
-5. Whether you want to prioritize:
-   - extreme precision and engineering depth
-   - faster productization and collaboration
-   - balanced roadmap

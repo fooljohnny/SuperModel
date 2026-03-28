@@ -1,0 +1,7 @@
+- [x] Record business decisions for first-priority workflow, customers, interoperability, AI deployment, and simulation depth
+- [x] Update product and architecture planning documents
+- [x] Define MVP scope for structural decomposition and manufacturing handoff
+- [x] Draft first-pass domain model centered on decomposition, connectors, verification, and tooling export
+- [ ] Break the MVP into executable implementation specs
+- [ ] Define API and file-schema contracts for source geometry import and part graph persistence
+- [ ] Define adapter contracts for ZBrush-led imports and downstream CNC/tooling export

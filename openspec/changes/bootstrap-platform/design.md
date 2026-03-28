@@ -47,7 +47,7 @@ easier to evaluate.
 
 The requested product spans DCC, CAD, CAE, PLM-lite, CAM interfaces, and AI.
 Mitigation: phase the product around a narrow MVP centered on imported CAD,
-part splitting, connector design, runner planning, and instruction output.
+part splitting, connector design, runner planning, and manufacturing exports.
 
 ### Risk: geometry kernel complexity
 

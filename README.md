@@ -18,6 +18,18 @@ The target workflow spans:
 6. Mold preparation, trial-shot feedback, and mold tuning
 7. Production support, instructions, decals, and packaging data
 
+## Current prioritized product slice
+
+The currently selected first commercial focus is:
+
+- structural decomposition and part-splitting workbench
+- connector, hole, rib, and tolerance engineering
+- runner planning and manufacturability validation
+- export of part structure data, runner data, and CNC/tooling packages
+
+The target commercial shape is a professional desktop product with a companion
+SaaS collaboration surface.
+
 ## Repository goals
 
 - Use OpenSpec-style Spec-Driven Development (SDD)
@@ -31,7 +43,8 @@ The target workflow spans:
 - Web client: Next.js review and collaboration application
 - Core engineering runtime: Rust domain and geometry services
 - CAD interoperability: OpenCascade-based adapter strategy
-- AI, optimization, and CAE pipelines: Python services
+- AI, optimization, and CAE pipelines: Python services with public-cloud-capable
+  execution
 - Shared metadata and collaboration backend: PostgreSQL + object storage
 
 ## Repository layout

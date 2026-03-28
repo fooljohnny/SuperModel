@@ -53,3 +53,10 @@ engineering data.
 - Documentation generation SHOULD be incremental after localized design edits.
 - Outputs MUST be traceable to source design revisions and released kit
   configurations.
+
+## Priority
+
+This capability is intentionally secondary to the first-release focus on part
+decomposition, connector engineering, manufacturability simulation, and tooling
+outputs. In the first release it should provide only the metadata needed to
+preserve runner-to-part lineage and future instruction generation.
