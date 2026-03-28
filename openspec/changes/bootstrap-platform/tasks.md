@@ -1,0 +1,7 @@
+- [x] Define product problem statement and target workflow
+- [x] Establish system architecture baseline for desktop, web, services, and compute
+- [x] Create initial capability specs for platform, workbench, manufacturing, and instructions
+- [x] Scaffold repository layout for multi-runtime implementation
+- [ ] Select the first executable vertical slice
+- [ ] Finalize CAD import/export priority matrix with user input
+- [ ] Finalize material library schema and manufacturing parameter model
