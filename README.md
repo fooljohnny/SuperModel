@@ -79,6 +79,16 @@ services/
 
 ## Current status
 
-This repository currently contains the initial product architecture,
-requirements planning, and workspace scaffold only. No production application
-code has been implemented yet.
+This repository now contains:
+
+- product architecture, requirements planning, and OpenSpec capability specs
+- shared TypeScript and Rust contract skeletons for the first MVP slice
+- a minimal `design-orchestrator` service implementing the first vertical flow:
+  project -> revision -> source geometry -> import job -> import completion
+
+The current code is still an early bootstrap implementation:
+
+- persistence is in-memory only
+- no real CAD adapter or PostgreSQL integration is wired yet
+- the service exists to validate contract shape and state transitions before
+  deeper implementation
