@@ -7,4 +7,5 @@
 - [x] Define API and file-schema contracts for source geometry import and part graph persistence
 - [x] Define adapter contracts for ZBrush-led imports and downstream CNC/tooling export
 - [x] Sequence implementation milestones across import, graph persistence, decomposition, connectors, verification, and runner export
+- [x] Draft the persistence schema, database design, and revision-bound SQL model
 - [ ] Convert the approved contracts into Rust/TypeScript shared types and persistence schemas
