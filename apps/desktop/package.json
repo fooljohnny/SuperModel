@@ -1,0 +1,10 @@
+{
+  "name": "@supermodel/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop shell for the SuperModel design workbench.",
+  "scripts": {
+    "dev": "echo \"Desktop shell bootstrap pending\"",
+    "build": "echo \"Desktop build bootstrap pending\""
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "supermodel",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.6.3",
+  "scripts": {
+    "dev:web": "pnpm --filter @supermodel/web dev",
+    "build:web": "pnpm --filter @supermodel/web build",
+    "lint:web": "pnpm --filter @supermodel/web lint"
+  }
+}

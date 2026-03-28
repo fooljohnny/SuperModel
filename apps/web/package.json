@@ -1,0 +1,12 @@
+{
+  "name": "@supermodel/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web collaboration surface placeholder for SuperModel.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  }
+}
