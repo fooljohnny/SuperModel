@@ -8,11 +8,12 @@ import type {
   JobStatus,
   Project,
   RegisterSourceGeometryInput,
+  RevisionDetail,
   RevisionState,
   SourceGeometry,
   StartImportJobInput,
 } from "./contracts.js";
-import { buildDefaultImportDiagnostics, deriveRevisionState, emptyImpactSummary } from "./contracts.js";
+import { buildDefaultImportDiagnostics, deriveRevisionState, emptyImpactSummary, mapJobStatusToImportStatus } from "./contracts.js";
 import type { CompleteImportJobResult, IStateStore } from "./repository.js";
 
 type RevisionRecord = DesignRevision & {
@@ -215,7 +216,7 @@ export class StateStore implements IStateStore {
     const geometry = this.sourceGeometries.get(job.sourceGeometryId);
     let importStatus: ImportStatus = "pending";
     if (geometry) {
-      importStatus = this.mapJobStatusToImportStatus(update.status, diagnostics);
+      importStatus = mapJobStatusToImportStatus(update.status, diagnostics);
       geometry.importStatus = importStatus;
       geometry.diagnostics = diagnostics;
     }
@@ -247,12 +248,7 @@ export class StateStore implements IStateStore {
       .filter((job): job is ImportJob => Boolean(job));
   }
 
-  async getRevisionDetail(revisionId: string): Promise<{
-    revision: DesignRevision;
-    project: Project;
-    sourceGeometries: SourceGeometry[];
-    importJobs: ImportJob[];
-  } | undefined> {
+  async getRevisionDetail(revisionId: string): Promise<RevisionDetail | undefined> {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return undefined;
@@ -295,24 +291,4 @@ export class StateStore implements IStateStore {
     return { ...rest };
   }
 
-  private mapJobStatusToImportStatus(
-    status: JobStatus,
-    diagnostics: ImportDiagnostic[],
-  ): ImportStatus {
-    switch (status) {
-      case "pending":
-        return "pending";
-      case "running":
-        return "running";
-      case "completed":
-        return diagnostics.some((diagnostic) => diagnostic.severity === "warning")
-          ? "completed_with_warnings"
-          : "completed";
-      case "failed":
-      case "cancelled":
-        return "failed";
-      default:
-        return "pending";
-    }
-  }
 }

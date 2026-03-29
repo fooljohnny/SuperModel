@@ -10,11 +10,12 @@ import type {
   JobStatus,
   Project,
   RegisterSourceGeometryInput,
+  RevisionDetail,
   RevisionState,
   SourceGeometry,
   StartImportJobInput,
 } from "./contracts.js";
-import { buildDefaultImportDiagnostics, deriveRevisionState, emptyImpactSummary } from "./contracts.js";
+import { buildDefaultImportDiagnostics, deriveRevisionState, mapJobStatusToImportStatus } from "./contracts.js";
 import type { CompleteImportJobResult, IStateStore } from "./repository.js";
 import { closePool } from "./db.js";
 
@@ -120,22 +121,6 @@ async function saveDiagnostics(
        values ($1, $2, $3, $4, $5, $6)`,
       [sourceGeometryId, d.code, d.severity, d.message, d.pathHint ?? null, d.remediationHint ?? null],
     );
-  }
-}
-
-function mapJobStatusToImportStatus(status: JobStatus, diagnostics: ImportDiagnostic[]): ImportStatus {
-  switch (status) {
-    case "pending":
-      return "pending";
-    case "running":
-      return "running";
-    case "completed":
-      return diagnostics.some((d) => d.severity === "warning") ? "completed_with_warnings" : "completed";
-    case "failed":
-    case "cancelled":
-      return "failed";
-    default:
-      return "pending";
   }
 }
 
@@ -379,12 +364,7 @@ export class PgStateStore implements IStateStore {
     return result;
   }
 
-  async getRevisionDetail(revisionId: string): Promise<{
-    revision: DesignRevision;
-    project: Project;
-    sourceGeometries: SourceGeometry[];
-    importJobs: ImportJob[];
-  } | undefined> {
+  async getRevisionDetail(revisionId: string): Promise<RevisionDetail | undefined> {
     const revision = await this.getRevision(revisionId);
     if (!revision) return undefined;
 

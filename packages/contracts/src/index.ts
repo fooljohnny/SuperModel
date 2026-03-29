@@ -172,3 +172,108 @@ export interface ErrorResponse {
     details?: Record<string, unknown>;
   };
 }
+
+// ─── domain helpers ─────────────────────────────────────────────────────────
+
+export function emptyImpactSummary(): ImpactSummary {
+  return {
+    staleEntities: 0,
+    invalidEntities: 0,
+    recomputeRequiredEntities: 0,
+    blockedRelease: false,
+  };
+}
+
+export function deriveRevisionState(sourceGeometries: SourceGeometry[]): RevisionState {
+  if (sourceGeometries.some((g) => g.importStatus === "failed")) {
+    return "invalid";
+  }
+  if (
+    sourceGeometries.some(
+      (g) => g.importStatus === "completed" || g.importStatus === "completed_with_warnings",
+    )
+  ) {
+    return "imported";
+  }
+  return "draft";
+}
+
+export function mapJobStatusToImportStatus(
+  status: JobStatus,
+  diagnostics?: ImportDiagnostic[],
+): ImportStatus {
+  switch (status) {
+    case "pending":
+      return "pending";
+    case "running":
+      return "running";
+    case "completed":
+      return diagnostics?.some((d) => d.severity === "warning")
+        ? "completed_with_warnings"
+        : "completed";
+    case "failed":
+    case "cancelled":
+      return "failed";
+    default:
+      return "pending";
+  }
+}
+
+export function buildDefaultImportDiagnostics(
+  sourceSystem: SourceSystem,
+): ImportDiagnostic[] {
+  switch (sourceSystem) {
+    case "zbrush":
+      return [
+        {
+          code: "ZB_IMPORT_COMPLETED",
+          severity: "info",
+          message: "ZBrush-origin geometry normalized into a placeholder internal mesh artifact.",
+          pathHint: null,
+          remediationHint: null,
+        },
+        {
+          code: "ZB_UNIT_ASSUMED_MM",
+          severity: "warning",
+          message: "No explicit ZBrush unit metadata detected; defaulting to millimeters.",
+          pathHint: null,
+          remediationHint: "Confirm import scale before downstream decomposition.",
+        },
+      ];
+    default:
+      return [
+        {
+          code: "IMPORT_COMPLETED",
+          severity: "info",
+          message: "Source geometry registered and placeholder import normalization completed.",
+          pathHint: null,
+          remediationHint: null,
+        },
+      ];
+  }
+}
+
+// ─── store-layer input types ────────────────────────────────────────────────
+// These extend the wire Request types with fields the server resolves
+// (IDs, foreign keys) before passing to the persistence layer.
+
+export type CreateProjectInput = CreateProjectRequest & {
+  createdBy: string;
+};
+
+export type CreateRevisionInput = CreateRevisionRequest & {
+  projectId: string;
+  createdBy: string;
+};
+
+export type RegisterSourceGeometryInput = RegisterSourceGeometryRequest & {
+  sourceGeometryId: string;
+  revisionId: string;
+  createdBy: string;
+};
+
+export type StartImportJobInput = StartImportJobRequest & {
+  sourceGeometryId: string;
+  adapterName: string;
+  requestedBy: string;
+};

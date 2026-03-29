@@ -8,7 +8,7 @@ import type {
   JobStatus,
   RegisterSourceGeometryInput,
   RevisionState,
-  SourceGeometry,
+  SourceSystem,
 } from "./contracts.js";
 import type { IStateStore } from "./repository.js";
 import { StateStore } from "./state.js";
@@ -211,7 +211,7 @@ function buildRoutes(store: IStateStore): Route[] {
         const request: RegisterSourceGeometryInput = {
           sourceGeometryId: `geom_${Date.now()}`,
           revisionId: params.revisionId,
-          sourceSystem: requireString(data, "sourceSystem") as SourceGeometry["sourceSystem"],
+          sourceSystem: requireString(data, "sourceSystem") as SourceSystem,
           declaredFileFormat: requireString(data, "declaredFileFormat"),
           sourceFilename: requireString(data, "sourceFilename"),
           unitSystem: requireString(data, "unitSystem"),

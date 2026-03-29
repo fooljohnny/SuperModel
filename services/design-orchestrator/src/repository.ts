@@ -7,6 +7,7 @@ import type {
   JobStatus,
   Project,
   RegisterSourceGeometryInput,
+  RevisionDetail,
   RevisionState,
   SourceGeometry,
   StartImportJobInput,
@@ -48,15 +49,7 @@ export interface IStateStore {
   getImportJob(jobId: string): Promise<ImportJob | undefined>;
   listRevisionImportJobs(revisionId: string): Promise<ImportJob[]>;
 
-  getRevisionDetail(revisionId: string): Promise<
-    | {
-        revision: DesignRevision;
-        project: Project;
-        sourceGeometries: SourceGeometry[];
-        importJobs: ImportJob[];
-      }
-    | undefined
-  >;
+  getRevisionDetail(revisionId: string): Promise<RevisionDetail | undefined>;
 
   getSystemSnapshot(): Promise<{
     projects: Project[];
