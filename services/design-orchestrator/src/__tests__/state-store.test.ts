@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import type { IStateStore } from "../repository.js";
+import { InvalidTransitionError } from "../repository.js";
 import { StateStore } from "../state.js";
 import type {
   CreateProjectInput,
   CreateRevisionInput,
   RegisterSourceGeometryInput,
+  RevisionState,
 } from "../contracts.js";
 
 function storeTests(createStore: () => IStateStore | Promise<IStateStore>) {
@@ -154,7 +156,7 @@ function storeTests(createStore: () => IStateStore | Promise<IStateStore>) {
       expect(r).toBeUndefined();
     });
 
-    it("promotes revision state", async () => {
+    it("promotes revision via valid transition (draft → imported)", async () => {
       const { revision } = await createProjectAndRevision();
       const promoted = await store.promoteRevision(revision.revisionId, "imported");
       expect(promoted).toBeDefined();
@@ -164,6 +166,98 @@ function storeTests(createStore: () => IStateStore | Promise<IStateStore>) {
     it("returns undefined when promoting non-existent revision", async () => {
       const r = await store.promoteRevision("rev_nonexistent", "imported");
       expect(r).toBeUndefined();
+    });
+  });
+
+  // ── revision state machine ────────────────────────────────────────────────
+
+  describe("revision state machine", () => {
+    it("allows the full happy path: draft → imported → structured → engineered → verified → released", async () => {
+      const { revision } = await createProjectAndRevision();
+      const transitions: RevisionState[] = ["imported", "structured", "engineered", "verified", "released"];
+      let current = revision;
+      for (const next of transitions) {
+        const promoted = await store.promoteRevision(current.revisionId, next);
+        expect(promoted).toBeDefined();
+        expect(promoted!.state).toBe(next);
+        current = promoted!;
+      }
+    });
+
+    it("rejects invalid transition draft → released", async () => {
+      const { revision } = await createProjectAndRevision();
+      await expect(
+        store.promoteRevision(revision.revisionId, "released"),
+      ).rejects.toThrow(InvalidTransitionError);
+    });
+
+    it("rejects invalid transition draft → structured (must go through imported)", async () => {
+      const { revision } = await createProjectAndRevision();
+      await expect(
+        store.promoteRevision(revision.revisionId, "structured"),
+      ).rejects.toThrow(InvalidTransitionError);
+    });
+
+    it("rejects invalid transition draft → verified", async () => {
+      const { revision } = await createProjectAndRevision();
+      await expect(
+        store.promoteRevision(revision.revisionId, "verified"),
+      ).rejects.toThrow(InvalidTransitionError);
+    });
+
+    it("allows recovery: imported → invalid", async () => {
+      const { revision } = await createProjectAndRevision();
+      await store.promoteRevision(revision.revisionId, "imported");
+      const invalidated = await store.promoteRevision(revision.revisionId, "invalid");
+      expect(invalidated!.state).toBe("invalid");
+    });
+
+    it("allows recovery: invalid → draft", async () => {
+      const { revision } = await createProjectAndRevision();
+      await store.promoteRevision(revision.revisionId, "imported");
+      await store.promoteRevision(revision.revisionId, "invalid");
+      const recovered = await store.promoteRevision(revision.revisionId, "draft");
+      expect(recovered!.state).toBe("draft");
+    });
+
+    it("allows recovery: invalid → imported", async () => {
+      const { revision } = await createProjectAndRevision();
+      await store.promoteRevision(revision.revisionId, "imported");
+      await store.promoteRevision(revision.revisionId, "invalid");
+      const recovered = await store.promoteRevision(revision.revisionId, "imported");
+      expect(recovered!.state).toBe("imported");
+    });
+
+    it("allows stale path: engineered → stale → engineered", async () => {
+      const { revision } = await createProjectAndRevision();
+      await store.promoteRevision(revision.revisionId, "imported");
+      await store.promoteRevision(revision.revisionId, "structured");
+      await store.promoteRevision(revision.revisionId, "engineered");
+      await store.promoteRevision(revision.revisionId, "stale");
+      const recovered = await store.promoteRevision(revision.revisionId, "engineered");
+      expect(recovered!.state).toBe("engineered");
+    });
+
+    it("provides detailed error info on InvalidTransitionError", async () => {
+      const { revision } = await createProjectAndRevision();
+      try {
+        await store.promoteRevision(revision.revisionId, "released");
+        expect.fail("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(InvalidTransitionError);
+        const ite = err as InvalidTransitionError;
+        expect(ite.result.from).toBe("draft");
+        expect(ite.result.to).toBe("released");
+        expect(ite.result.valid).toBe(false);
+        expect(ite.result.allowed).toEqual(["imported"]);
+      }
+    });
+
+    it("rejects self-transition (draft → draft)", async () => {
+      const { revision } = await createProjectAndRevision();
+      await expect(
+        store.promoteRevision(revision.revisionId, "draft"),
+      ).rejects.toThrow(InvalidTransitionError);
     });
   });
 

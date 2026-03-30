@@ -11,6 +11,7 @@ import type {
   SourceSystem,
 } from "./contracts.js";
 import type { IStateStore } from "./repository.js";
+import { InvalidTransitionError } from "./repository.js";
 import { StateStore } from "./state.js";
 
 type Handler = (
@@ -189,12 +190,24 @@ function buildRoutes(store: IStateStore): Route[] {
         const data = requireObject(body);
         const nextState = requireString(data, "nextState") as RevisionState;
 
-        const revision = await store.promoteRevision(params.revisionId, nextState);
-        if (!revision) {
-          error(res, 404, "REVISION_NOT_FOUND", "Revision not found.");
-          return;
+        try {
+          const revision = await store.promoteRevision(params.revisionId, nextState);
+          if (!revision) {
+            error(res, 404, "REVISION_NOT_FOUND", "Revision not found.");
+            return;
+          }
+          json(res, 200, revision);
+        } catch (err) {
+          if (err instanceof InvalidTransitionError) {
+            error(res, 409, "REVISION_STATE_BLOCKED", err.message, {
+              from: err.result.from,
+              to: err.result.to,
+              allowed: err.result.allowed,
+            });
+            return;
+          }
+          throw err;
         }
-        json(res, 200, revision);
       },
     },
     {

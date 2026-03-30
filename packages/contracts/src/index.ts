@@ -253,6 +253,52 @@ export function buildDefaultImportDiagnostics(
   }
 }
 
+// ─── revision state machine ─────────────────────────────────────────────────
+
+const ALLOWED_TRANSITIONS: ReadonlyMap<RevisionState, readonly RevisionState[]> = new Map<
+  RevisionState,
+  RevisionState[]
+>([
+  // happy path
+  ["draft", ["imported"]],
+  ["imported", ["structured", "invalid"]],
+  ["structured", ["engineered", "stale"]],
+  ["engineered", ["verified", "stale", "invalid"]],
+  ["verified", ["released", "stale", "invalid"]],
+  ["released", ["stale", "invalid"]],
+
+  // recovery
+  ["stale", ["structured", "engineered", "verified"]],
+  ["invalid", ["draft", "imported", "structured", "engineered"]],
+
+  // archived is terminal
+  ["archived", []],
+]);
+
+export function getAllowedTransitions(from: RevisionState): readonly RevisionState[] {
+  return ALLOWED_TRANSITIONS.get(from) ?? [];
+}
+
+export interface TransitionValidationResult {
+  valid: boolean;
+  from: RevisionState;
+  to: RevisionState;
+  allowed: readonly RevisionState[];
+}
+
+export function validateStateTransition(
+  from: RevisionState,
+  to: RevisionState,
+): TransitionValidationResult {
+  const allowed = getAllowedTransitions(from);
+  return {
+    valid: allowed.includes(to),
+    from,
+    to,
+    allowed,
+  };
+}
+
 // ─── store-layer input types ────────────────────────────────────────────────
 // These extend the wire Request types with fields the server resolves
 // (IDs, foreign keys) before passing to the persistence layer.

@@ -24,11 +24,14 @@ export type {
   SourceSystem,
   StartImportJobInput,
   StartImportJobRequest,
+  TransitionValidationResult,
 } from "@supermodel/contracts";
 
 export {
   buildDefaultImportDiagnostics,
   deriveRevisionState,
   emptyImpactSummary,
+  getAllowedTransitions,
   mapJobStatusToImportStatus,
+  validateStateTransition,
 } from "@supermodel/contracts";

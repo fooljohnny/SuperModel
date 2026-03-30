@@ -11,9 +11,23 @@ import type {
   RevisionState,
   SourceGeometry,
   StartImportJobInput,
+  TransitionValidationResult,
 } from "./contracts.js";
 
 export type CompleteImportJobResult = ImportJob & { importStatus: ImportStatus };
+
+export class InvalidTransitionError extends Error {
+  public readonly result: TransitionValidationResult;
+
+  constructor(result: TransitionValidationResult) {
+    super(
+      `Invalid state transition: ${result.from} → ${result.to}. ` +
+        `Allowed from '${result.from}': [${result.allowed.join(", ")}]`,
+    );
+    this.name = "InvalidTransitionError";
+    this.result = result;
+  }
+}
 
 export interface IStateStore {
   createProject(input: CreateProjectInput): Promise<Project>;
@@ -26,6 +40,12 @@ export interface IStateStore {
     revisionId: string,
     nextState: RevisionState,
   ): Promise<DesignRevision | undefined>;
+
+  /**
+   * Validates the state transition against the revision state machine
+   * before applying it. Throws InvalidTransitionError if the transition
+   * is not allowed.
+   */
   promoteRevision(
     revisionId: string,
     nextState: RevisionState,

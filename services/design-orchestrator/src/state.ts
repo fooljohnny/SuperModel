@@ -13,7 +13,8 @@ import type {
   SourceGeometry,
   StartImportJobInput,
 } from "./contracts.js";
-import { buildDefaultImportDiagnostics, deriveRevisionState, emptyImpactSummary, mapJobStatusToImportStatus } from "./contracts.js";
+import { buildDefaultImportDiagnostics, deriveRevisionState, emptyImpactSummary, mapJobStatusToImportStatus, validateStateTransition } from "./contracts.js";
+import { InvalidTransitionError } from "./repository.js";
 import type { CompleteImportJobResult, IStateStore } from "./repository.js";
 
 type RevisionRecord = DesignRevision & {
@@ -104,6 +105,11 @@ export class StateStore implements IStateStore {
     const revision = this.revisions.get(revisionId);
     if (!revision) {
       return undefined;
+    }
+
+    const validation = validateStateTransition(revision.state, nextState);
+    if (!validation.valid) {
+      throw new InvalidTransitionError(validation);
     }
 
     revision.state = nextState;

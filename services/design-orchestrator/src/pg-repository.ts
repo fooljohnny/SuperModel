@@ -15,7 +15,8 @@ import type {
   SourceGeometry,
   StartImportJobInput,
 } from "./contracts.js";
-import { buildDefaultImportDiagnostics, deriveRevisionState, mapJobStatusToImportStatus } from "./contracts.js";
+import { buildDefaultImportDiagnostics, deriveRevisionState, mapJobStatusToImportStatus, validateStateTransition } from "./contracts.js";
+import { InvalidTransitionError } from "./repository.js";
 import type { CompleteImportJobResult, IStateStore } from "./repository.js";
 import { closePool } from "./db.js";
 
@@ -191,6 +192,14 @@ export class PgStateStore implements IStateStore {
   }
 
   async promoteRevision(revisionId: string, nextState: RevisionState): Promise<DesignRevision | undefined> {
+    const current = await this.getRevision(revisionId);
+    if (!current) return undefined;
+
+    const validation = validateStateTransition(current.state, nextState);
+    if (!validation.valid) {
+      throw new InvalidTransitionError(validation);
+    }
+
     return this.updateRevisionState(revisionId, nextState);
   }
 
