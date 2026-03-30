@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: supermodel
+          POSTGRES_PASSWORD: supermodel
+          POSTGRES_DB: supermodel_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U supermodel"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://supermodel:supermodel@localhost:5432/supermodel_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build contracts
+        run: pnpm --filter @supermodel/contracts build
+
+      - name: Type-check orchestrator
+        run: pnpm --filter @supermodel/design-orchestrator build
+
+      - name: Run unit tests (in-memory + PostgreSQL)
+        run: pnpm --filter @supermodel/design-orchestrator test
+
+      - name: Run smoke test (in-memory)
+        run: pnpm --filter @supermodel/design-orchestrator test:smoke
+
+      - name: Run smoke test (PostgreSQL)
+        run: pnpm --filter @supermodel/design-orchestrator test:smoke
+        env:
+          DATABASE_URL: postgresql://supermodel:supermodel@localhost:5432/supermodel_test
+
+      - name: Rust contracts check
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo check -p domain-contracts
