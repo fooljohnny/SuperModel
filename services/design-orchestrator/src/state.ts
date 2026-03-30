@@ -1,4 +1,7 @@
 import type {
+  AssemblyNode,
+  CreateAssemblyNodeInput,
+  CreatePartDefinitionInput,
   CreateProjectInput,
   CreateRevisionInput,
   DesignRevision,
@@ -6,6 +9,7 @@ import type {
   ImportJob,
   ImportStatus,
   JobStatus,
+  PartDefinition,
   Project,
   RegisterSourceGeometryInput,
   RevisionDetail,
@@ -31,6 +35,8 @@ export class StateStore implements IStateStore {
   private readonly revisions = new Map<string, RevisionRecord>();
   private readonly sourceGeometries = new Map<string, SourceGeometry>();
   private readonly importJobs = new Map<string, ImportJob>();
+  private readonly assemblyNodes = new Map<string, AssemblyNode>();
+  private readonly partDefinitions = new Map<string, PartDefinition>();
 
   async createProject(input: CreateProjectInput): Promise<Project> {
     const project: Project = {
@@ -253,6 +259,96 @@ export class StateStore implements IStateStore {
       .map((jobId) => this.importJobs.get(jobId))
       .filter((job): job is ImportJob => Boolean(job));
   }
+
+  // ── assembly nodes ─────────────────────────────────────────────────────
+
+  async createAssemblyNode(input: CreateAssemblyNodeInput): Promise<AssemblyNode> {
+    const revision = this.revisions.get(input.revisionId);
+    if (!revision) {
+      throw new Error(`Revision not found: ${input.revisionId}`);
+    }
+
+    if (input.parentNodeId) {
+      const parentKey = `${input.parentNodeId}:${input.revisionId}`;
+      if (!this.assemblyNodes.has(parentKey)) {
+        throw new Error(`Parent assembly node not found: ${input.parentNodeId}`);
+      }
+    }
+
+    const node: AssemblyNode = {
+      assemblyNodeId: input.assemblyNodeId,
+      projectId: input.projectId,
+      revisionId: input.revisionId,
+      parentNodeId: input.parentNodeId ?? null,
+      sourceGeometryId: input.sourceGeometryId ?? null,
+      name: input.name,
+      nodeType: input.nodeType,
+      transform: {
+        translation: input.transform?.translation ?? [0, 0, 0],
+        rotation: input.transform?.rotation ?? [0, 0, 0, 1],
+        scale: input.transform?.scale ?? [1, 1, 1],
+      },
+      suppressed: input.suppressed ?? false,
+      impactState: "clean",
+      createdAt: now(),
+      createdBy: input.createdBy,
+    };
+
+    this.assemblyNodes.set(`${node.assemblyNodeId}:${node.revisionId}`, node);
+    return node;
+  }
+
+  async listAssemblyNodes(revisionId: string): Promise<AssemblyNode[]> {
+    return Array.from(this.assemblyNodes.values())
+      .filter((n) => n.revisionId === revisionId);
+  }
+
+  async getAssemblyNode(revisionId: string, assemblyNodeId: string): Promise<AssemblyNode | undefined> {
+    return this.assemblyNodes.get(`${assemblyNodeId}:${revisionId}`);
+  }
+
+  // ── part definitions ──────────────────────────────────────────────────
+
+  async createPartDefinition(input: CreatePartDefinitionInput): Promise<PartDefinition> {
+    const revision = this.revisions.get(input.revisionId);
+    if (!revision) {
+      throw new Error(`Revision not found: ${input.revisionId}`);
+    }
+
+    const part: PartDefinition = {
+      partId: input.partId,
+      projectId: input.projectId,
+      revisionId: input.revisionId,
+      assemblyNodeId: input.assemblyNodeId ?? null,
+      partCode: input.partCode,
+      displayName: input.displayName,
+      partFamily: input.partFamily,
+      colorZone: input.colorZone ?? null,
+      surfaceFinish: input.surfaceFinish ?? null,
+      shellThicknessMm: input.shellThicknessMm ?? null,
+      draftRequirementDeg: input.draftRequirementDeg ?? null,
+      splitStrategy: input.splitStrategy,
+      isStructural: input.isStructural ?? true,
+      approvalState: "working",
+      impactState: "clean",
+      createdAt: now(),
+      createdBy: input.createdBy,
+    };
+
+    this.partDefinitions.set(`${part.partId}:${part.revisionId}`, part);
+    return part;
+  }
+
+  async listPartDefinitions(revisionId: string): Promise<PartDefinition[]> {
+    return Array.from(this.partDefinitions.values())
+      .filter((p) => p.revisionId === revisionId);
+  }
+
+  async getPartDefinition(revisionId: string, partId: string): Promise<PartDefinition | undefined> {
+    return this.partDefinitions.get(`${partId}:${revisionId}`);
+  }
+
+  // ── composite queries ─────────────────────────────────────────────────
 
   async getRevisionDetail(revisionId: string): Promise<RevisionDetail | undefined> {
     const revision = this.revisions.get(revisionId);

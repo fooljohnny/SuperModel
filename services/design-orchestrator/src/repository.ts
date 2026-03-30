@@ -1,10 +1,14 @@
 import type {
+  AssemblyNode,
+  CreateAssemblyNodeInput,
+  CreatePartDefinitionInput,
   CreateProjectInput,
   CreateRevisionInput,
   DesignRevision,
   ImportJob,
   ImportStatus,
   JobStatus,
+  PartDefinition,
   Project,
   RegisterSourceGeometryInput,
   RevisionDetail,
@@ -68,6 +72,14 @@ export interface IStateStore {
   ): Promise<CompleteImportJobResult | undefined>;
   getImportJob(jobId: string): Promise<ImportJob | undefined>;
   listRevisionImportJobs(revisionId: string): Promise<ImportJob[]>;
+
+  createAssemblyNode(input: CreateAssemblyNodeInput): Promise<AssemblyNode>;
+  listAssemblyNodes(revisionId: string): Promise<AssemblyNode[]>;
+  getAssemblyNode(revisionId: string, assemblyNodeId: string): Promise<AssemblyNode | undefined>;
+
+  createPartDefinition(input: CreatePartDefinitionInput): Promise<PartDefinition>;
+  listPartDefinitions(revisionId: string): Promise<PartDefinition[]>;
+  getPartDefinition(revisionId: string, partId: string): Promise<PartDefinition | undefined>;
 
   getRevisionDetail(revisionId: string): Promise<RevisionDetail | undefined>;
 

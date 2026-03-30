@@ -1,6 +1,9 @@
 import type pg from "pg";
 
 import type {
+  AssemblyNode,
+  CreateAssemblyNodeInput,
+  CreatePartDefinitionInput,
   CreateProjectInput,
   CreateRevisionInput,
   DesignRevision,
@@ -8,6 +11,7 @@ import type {
   ImportJob,
   ImportStatus,
   JobStatus,
+  PartDefinition,
   Project,
   RegisterSourceGeometryInput,
   RevisionDetail,
@@ -86,6 +90,49 @@ function rowToImportJob(row: Record<string, unknown>, diagnostics: ImportDiagnos
     requestedBy: row.requested_by as string,
     errorCode: (row.error_code as string) ?? null,
     errorMessage: (row.error_message as string) ?? null,
+  };
+}
+
+function rowToAssemblyNode(row: Record<string, unknown>): AssemblyNode {
+  return {
+    assemblyNodeId: row.assembly_node_id as string,
+    projectId: row.project_id as string,
+    revisionId: row.revision_id as string,
+    parentNodeId: (row.parent_node_id as string) ?? null,
+    sourceGeometryId: (row.source_geometry_id as string) ?? null,
+    name: row.name as string,
+    nodeType: row.node_type as AssemblyNode["nodeType"],
+    transform: {
+      translation: (row.translation as [number, number, number]) ?? [0, 0, 0],
+      rotation: (row.rotation_quaternion as [number, number, number, number]) ?? [0, 0, 0, 1],
+      scale: (row.scale as [number, number, number]) ?? [1, 1, 1],
+    },
+    suppressed: Boolean(row.suppressed),
+    impactState: row.impact_state as AssemblyNode["impactState"],
+    createdAt: (row.created_at as Date).toISOString(),
+    createdBy: row.created_by as string,
+  };
+}
+
+function rowToPartDefinition(row: Record<string, unknown>): PartDefinition {
+  return {
+    partId: row.part_id as string,
+    projectId: row.project_id as string,
+    revisionId: row.revision_id as string,
+    assemblyNodeId: (row.assembly_node_id as string) ?? null,
+    partCode: row.part_code as string,
+    displayName: row.display_name as string,
+    partFamily: row.part_family as string,
+    colorZone: (row.color_zone as string) ?? null,
+    surfaceFinish: (row.surface_finish as string) ?? null,
+    shellThicknessMm: row.shell_thickness_mm != null ? Number(row.shell_thickness_mm) : null,
+    draftRequirementDeg: row.draft_requirement_deg != null ? Number(row.draft_requirement_deg) : null,
+    splitStrategy: row.split_strategy as PartDefinition["splitStrategy"],
+    isStructural: Boolean(row.is_structural),
+    approvalState: row.approval_state as PartDefinition["approvalState"],
+    impactState: row.impact_state as PartDefinition["impactState"],
+    createdAt: (row.created_at as Date).toISOString(),
+    createdBy: row.created_by as string,
   };
 }
 
@@ -372,6 +419,111 @@ export class PgStateStore implements IStateStore {
     }
     return result;
   }
+
+  // ── assembly nodes ─────────────────────────────────────────────────────
+
+  async createAssemblyNode(input: CreateAssemblyNodeInput): Promise<AssemblyNode> {
+    const revisionResult = await this.pool.query(
+      `select project_id from design_revisions where revision_id = $1`,
+      [input.revisionId],
+    );
+    if (revisionResult.rowCount === 0) {
+      throw new Error(`Revision not found: ${input.revisionId}`);
+    }
+
+    if (input.parentNodeId) {
+      const parentResult = await this.pool.query(
+        `select 1 from assembly_nodes where assembly_node_id = $1 and revision_id = $2`,
+        [input.parentNodeId, input.revisionId],
+      );
+      if (!parentResult.rowCount || parentResult.rowCount === 0) {
+        throw new Error(`Parent assembly node not found: ${input.parentNodeId}`);
+      }
+    }
+
+    const translation = JSON.stringify(input.transform?.translation ?? [0, 0, 0]);
+    const rotation = JSON.stringify(input.transform?.rotation ?? [0, 0, 0, 1]);
+    const scale = JSON.stringify(input.transform?.scale ?? [1, 1, 1]);
+
+    const { rows } = await this.pool.query(
+      `insert into assembly_nodes
+         (assembly_node_id, project_id, revision_id, parent_node_id, source_geometry_id,
+          name, node_type, translation, rotation_quaternion, scale, suppressed, created_by)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       returning *`,
+      [
+        input.assemblyNodeId, input.projectId, input.revisionId,
+        input.parentNodeId ?? null, input.sourceGeometryId ?? null,
+        input.name, input.nodeType,
+        translation, rotation, scale,
+        input.suppressed ?? false, input.createdBy,
+      ],
+    );
+    return rowToAssemblyNode(rows[0]);
+  }
+
+  async listAssemblyNodes(revisionId: string): Promise<AssemblyNode[]> {
+    const { rows } = await this.pool.query(
+      `select * from assembly_nodes where revision_id = $1 order by created_at`,
+      [revisionId],
+    );
+    return rows.map(rowToAssemblyNode);
+  }
+
+  async getAssemblyNode(revisionId: string, assemblyNodeId: string): Promise<AssemblyNode | undefined> {
+    const { rows } = await this.pool.query(
+      `select * from assembly_nodes where assembly_node_id = $1 and revision_id = $2`,
+      [assemblyNodeId, revisionId],
+    );
+    return rows.length > 0 ? rowToAssemblyNode(rows[0]) : undefined;
+  }
+
+  // ── part definitions ──────────────────────────────────────────────────
+
+  async createPartDefinition(input: CreatePartDefinitionInput): Promise<PartDefinition> {
+    const revisionResult = await this.pool.query(
+      `select project_id from design_revisions where revision_id = $1`,
+      [input.revisionId],
+    );
+    if (revisionResult.rowCount === 0) {
+      throw new Error(`Revision not found: ${input.revisionId}`);
+    }
+
+    const { rows } = await this.pool.query(
+      `insert into part_definitions
+         (part_id, project_id, revision_id, assembly_node_id, part_code, display_name,
+          part_family, color_zone, surface_finish, shell_thickness_mm, draft_requirement_deg,
+          split_strategy, is_structural, created_by)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       returning *`,
+      [
+        input.partId, input.projectId, input.revisionId,
+        input.assemblyNodeId ?? null, input.partCode, input.displayName,
+        input.partFamily, input.colorZone ?? null, input.surfaceFinish ?? null,
+        input.shellThicknessMm ?? null, input.draftRequirementDeg ?? null,
+        input.splitStrategy, input.isStructural ?? true, input.createdBy,
+      ],
+    );
+    return rowToPartDefinition(rows[0]);
+  }
+
+  async listPartDefinitions(revisionId: string): Promise<PartDefinition[]> {
+    const { rows } = await this.pool.query(
+      `select * from part_definitions where revision_id = $1 order by created_at`,
+      [revisionId],
+    );
+    return rows.map(rowToPartDefinition);
+  }
+
+  async getPartDefinition(revisionId: string, partId: string): Promise<PartDefinition | undefined> {
+    const { rows } = await this.pool.query(
+      `select * from part_definitions where part_id = $1 and revision_id = $2`,
+      [partId, revisionId],
+    );
+    return rows.length > 0 ? rowToPartDefinition(rows[0]) : undefined;
+  }
+
+  // ── composite queries ─────────────────────────────────────────────────
 
   async getRevisionDetail(revisionId: string): Promise<RevisionDetail | undefined> {
     const revision = await this.getRevision(revisionId);

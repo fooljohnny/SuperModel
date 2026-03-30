@@ -1,14 +1,18 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 
 import type {
+  CreateAssemblyNodeInput,
+  CreatePartDefinitionInput,
   CreateProjectInput,
   CreateRevisionInput,
   ErrorResponse,
   ImportStatus,
   JobStatus,
+  NodeType,
   RegisterSourceGeometryInput,
   RevisionState,
   SourceSystem,
+  SplitStrategy,
 } from "./contracts.js";
 import type { IStateStore } from "./repository.js";
 import { InvalidTransitionError } from "./repository.js";
@@ -329,6 +333,97 @@ function buildRoutes(store: IStateStore): Route[] {
       path: /^\/api\/debug\/snapshot$/,
       handler: async (_req, res) => {
         json(res, 200, await store.getSystemSnapshot());
+      },
+    },
+
+    // ── assembly nodes ────────────────────────────────────────────────
+
+    {
+      method: "POST",
+      path: /^\/api\/revisions\/([^/]+)\/assembly-nodes$/,
+      handler: async (_req, res, body, params) => {
+        const revision = await store.getRevision(params.revisionId);
+        if (!revision) {
+          error(res, 404, "REVISION_NOT_FOUND", "Revision not found.");
+          return;
+        }
+
+        const data = requireObject(body);
+        const input: CreateAssemblyNodeInput = {
+          assemblyNodeId: `anode_${Date.now()}`,
+          projectId: revision.projectId,
+          revisionId: params.revisionId,
+          name: requireString(data, "name"),
+          nodeType: requireString(data, "nodeType") as NodeType,
+          parentNodeId: optionalString(data, "parentNodeId") ?? null,
+          sourceGeometryId: optionalString(data, "sourceGeometryId") ?? null,
+          transform: data.transform as CreateAssemblyNodeInput["transform"],
+          suppressed: data.suppressed === true,
+          createdBy: optionalString(data, "createdBy") ?? "system",
+        };
+        const node = await store.createAssemblyNode(input);
+        json(res, 201, node);
+      },
+    },
+    {
+      method: "GET",
+      path: /^\/api\/revisions\/([^/]+)\/assembly-nodes$/,
+      handler: async (_req, res, _body, params) => {
+        json(res, 200, { assemblyNodes: await store.listAssemblyNodes(params.revisionId) });
+      },
+    },
+    {
+      method: "GET",
+      path: /^\/api\/revisions\/([^/]+)\/assembly-graph$/,
+      handler: async (_req, res, _body, params) => {
+        const revision = await store.getRevision(params.revisionId);
+        if (!revision) {
+          error(res, 404, "REVISION_NOT_FOUND", "Revision not found.");
+          return;
+        }
+        const nodes = await store.listAssemblyNodes(params.revisionId);
+        json(res, 200, { revision, assemblyNodes: nodes });
+      },
+    },
+
+    // ── part definitions ──────────────────────────────────────────────
+
+    {
+      method: "POST",
+      path: /^\/api\/revisions\/([^/]+)\/part-definitions$/,
+      handler: async (_req, res, body, params) => {
+        const revision = await store.getRevision(params.revisionId);
+        if (!revision) {
+          error(res, 404, "REVISION_NOT_FOUND", "Revision not found.");
+          return;
+        }
+
+        const data = requireObject(body);
+        const input: CreatePartDefinitionInput = {
+          partId: `part_${Date.now()}`,
+          projectId: revision.projectId,
+          revisionId: params.revisionId,
+          partCode: requireString(data, "partCode"),
+          displayName: requireString(data, "displayName"),
+          partFamily: requireString(data, "partFamily"),
+          assemblyNodeId: optionalString(data, "assemblyNodeId") ?? null,
+          colorZone: optionalString(data, "colorZone") ?? null,
+          surfaceFinish: optionalString(data, "surfaceFinish") ?? null,
+          shellThicknessMm: optionalNumber(data, "shellThicknessMm") ?? null,
+          draftRequirementDeg: optionalNumber(data, "draftRequirementDeg") ?? null,
+          splitStrategy: requireString(data, "splitStrategy") as SplitStrategy,
+          isStructural: data.isStructural !== false,
+          createdBy: optionalString(data, "createdBy") ?? "system",
+        };
+        const part = await store.createPartDefinition(input);
+        json(res, 201, part);
+      },
+    },
+    {
+      method: "GET",
+      path: /^\/api\/revisions\/([^/]+)\/part-definitions$/,
+      handler: async (_req, res, _body, params) => {
+        json(res, 200, { partDefinitions: await store.listPartDefinitions(params.revisionId) });
       },
     },
   ];

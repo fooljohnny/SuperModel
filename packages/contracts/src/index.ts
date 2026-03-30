@@ -51,6 +51,10 @@ export type JobStatus =
 
 export type ProjectStatus = "active";
 
+export type NodeType = "assembly" | "subassembly" | "part_instance";
+
+export type SplitStrategy = "manual" | "assisted" | "rule";
+
 export interface ImpactSummary {
   staleEntities: number;
   invalidEntities: number;
@@ -124,6 +128,45 @@ export interface ImportJob {
   errorMessage: string | null;
 }
 
+export interface AssemblyNode {
+  assemblyNodeId: string;
+  projectId: string;
+  revisionId: string;
+  parentNodeId: string | null;
+  sourceGeometryId: string | null;
+  name: string;
+  nodeType: NodeType;
+  transform: {
+    translation: [number, number, number];
+    rotation: [number, number, number, number];
+    scale: [number, number, number];
+  };
+  suppressed: boolean;
+  impactState: ImpactState;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface PartDefinition {
+  partId: string;
+  projectId: string;
+  revisionId: string;
+  assemblyNodeId: string | null;
+  partCode: string;
+  displayName: string;
+  partFamily: string;
+  colorZone: string | null;
+  surfaceFinish: string | null;
+  shellThicknessMm: number | null;
+  draftRequirementDeg: number | null;
+  splitStrategy: SplitStrategy;
+  isStructural: boolean;
+  approvalState: ApprovalState;
+  impactState: ImpactState;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface RevisionDetail {
   revision: DesignRevision;
   project: Project;
@@ -163,6 +206,34 @@ export interface CompleteImportJobRequest {
   status: ImportStatus;
   progress?: number;
   diagnostics?: ImportDiagnostic[];
+}
+
+export interface CreateAssemblyNodeRequest {
+  name: string;
+  parentNodeId?: string | null;
+  sourceGeometryId?: string | null;
+  nodeType: NodeType;
+  transform?: {
+    translation?: [number, number, number];
+    rotation?: [number, number, number, number];
+    scale?: [number, number, number];
+  };
+  suppressed?: boolean;
+  createdBy?: string;
+}
+
+export interface CreatePartDefinitionRequest {
+  partCode: string;
+  displayName: string;
+  partFamily: string;
+  assemblyNodeId?: string | null;
+  colorZone?: string | null;
+  surfaceFinish?: string | null;
+  shellThicknessMm?: number | null;
+  draftRequirementDeg?: number | null;
+  splitStrategy: SplitStrategy;
+  isStructural?: boolean;
+  createdBy?: string;
 }
 
 export interface ErrorResponse {
@@ -322,4 +393,18 @@ export type StartImportJobInput = StartImportJobRequest & {
   sourceGeometryId: string;
   adapterName: string;
   requestedBy: string;
+};
+
+export type CreateAssemblyNodeInput = CreateAssemblyNodeRequest & {
+  assemblyNodeId: string;
+  projectId: string;
+  revisionId: string;
+  createdBy: string;
+};
+
+export type CreatePartDefinitionInput = CreatePartDefinitionRequest & {
+  partId: string;
+  projectId: string;
+  revisionId: string;
+  createdBy: string;
 };

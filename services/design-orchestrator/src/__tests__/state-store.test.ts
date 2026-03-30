@@ -493,6 +493,242 @@ function storeTests(createStore: () => IStateStore | Promise<IStateStore>) {
       expect(result!.importStatus).toBe("completed");
     });
   });
+
+  // ── assembly nodes ────────────────────────────────────────────────────────
+
+  describe("assembly nodes", () => {
+    it("creates an assembly node under a revision", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const node = await store.createAssemblyNode({
+        assemblyNodeId: `anode_test_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        name: "Root Assembly",
+        nodeType: "assembly",
+        createdBy: "test-user",
+      });
+      expect(node.assemblyNodeId).toMatch(/^anode_/);
+      expect(node.name).toBe("Root Assembly");
+      expect(node.nodeType).toBe("assembly");
+      expect(node.parentNodeId).toBeNull();
+      expect(node.impactState).toBe("clean");
+      expect(node.suppressed).toBe(false);
+      expect(node.transform.translation).toEqual([0, 0, 0]);
+    });
+
+    it("creates a child node with parent reference", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const root = await store.createAssemblyNode({
+        assemblyNodeId: `anode_root_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        name: "Root",
+        nodeType: "assembly",
+        createdBy: "test-user",
+      });
+      const child = await store.createAssemblyNode({
+        assemblyNodeId: `anode_child_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        name: "Torso Subassembly",
+        nodeType: "subassembly",
+        parentNodeId: root.assemblyNodeId,
+        createdBy: "test-user",
+      });
+      expect(child.parentNodeId).toBe(root.assemblyNodeId);
+      expect(child.nodeType).toBe("subassembly");
+    });
+
+    it("rejects node for non-existent revision", async () => {
+      await expect(
+        store.createAssemblyNode({
+          assemblyNodeId: `anode_test_${Date.now()}`,
+          projectId: "proj_x",
+          revisionId: "rev_nonexistent",
+          name: "Test",
+          nodeType: "assembly",
+          createdBy: "test-user",
+        }),
+      ).rejects.toThrow(/not found/i);
+    });
+
+    it("rejects node with non-existent parent", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      await expect(
+        store.createAssemblyNode({
+          assemblyNodeId: `anode_test_${Date.now()}`,
+          projectId: project.projectId,
+          revisionId: revision.revisionId,
+          name: "Orphan",
+          nodeType: "subassembly",
+          parentNodeId: "anode_nonexistent",
+          createdBy: "test-user",
+        }),
+      ).rejects.toThrow(/not found/i);
+    });
+
+    it("lists assembly nodes for a revision", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      await store.createAssemblyNode({
+        assemblyNodeId: `anode_list_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        name: "Node A",
+        nodeType: "assembly",
+        createdBy: "test-user",
+      });
+      const list = await store.listAssemblyNodes(revision.revisionId);
+      expect(list.length).toBeGreaterThanOrEqual(1);
+      expect(list.some((n) => n.name === "Node A")).toBe(true);
+    });
+
+    it("gets a single assembly node", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const nodeId = `anode_get_${Date.now()}`;
+      await store.createAssemblyNode({
+        assemblyNodeId: nodeId,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        name: "Fetchable Node",
+        nodeType: "part_instance",
+        createdBy: "test-user",
+      });
+      const fetched = await store.getAssemblyNode(revision.revisionId, nodeId);
+      expect(fetched).toBeDefined();
+      expect(fetched!.name).toBe("Fetchable Node");
+    });
+
+    it("returns undefined for non-existent assembly node", async () => {
+      const { revision } = await createProjectAndRevision();
+      const n = await store.getAssemblyNode(revision.revisionId, "anode_nonexistent");
+      expect(n).toBeUndefined();
+    });
+
+    it("preserves custom transform values", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const node = await store.createAssemblyNode({
+        assemblyNodeId: `anode_xf_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        name: "Transformed",
+        nodeType: "assembly",
+        transform: {
+          translation: [10, 20, 30],
+          rotation: [0.5, 0.5, 0.5, 0.5],
+          scale: [2, 2, 2],
+        },
+        createdBy: "test-user",
+      });
+      expect(node.transform.translation).toEqual([10, 20, 30]);
+      expect(node.transform.rotation).toEqual([0.5, 0.5, 0.5, 0.5]);
+      expect(node.transform.scale).toEqual([2, 2, 2]);
+    });
+  });
+
+  // ── part definitions ──────────────────────────────────────────────────────
+
+  describe("part definitions", () => {
+    it("creates a part definition under a revision", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const part = await store.createPartDefinition({
+        partId: `part_test_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        partCode: "A1",
+        displayName: "Torso Outer Armor",
+        partFamily: "armor",
+        splitStrategy: "manual",
+        createdBy: "test-user",
+      });
+      expect(part.partId).toMatch(/^part_/);
+      expect(part.partCode).toBe("A1");
+      expect(part.displayName).toBe("Torso Outer Armor");
+      expect(part.splitStrategy).toBe("manual");
+      expect(part.isStructural).toBe(true);
+      expect(part.approvalState).toBe("working");
+      expect(part.impactState).toBe("clean");
+    });
+
+    it("creates a part with all optional fields", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const part = await store.createPartDefinition({
+        partId: `part_full_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        partCode: "B2",
+        displayName: "Inner Frame",
+        partFamily: "structural",
+        colorZone: "zone-1",
+        surfaceFinish: "matte",
+        shellThicknessMm: 2.5,
+        draftRequirementDeg: 3.0,
+        splitStrategy: "assisted",
+        isStructural: false,
+        createdBy: "test-user",
+      });
+      expect(part.colorZone).toBe("zone-1");
+      expect(part.surfaceFinish).toBe("matte");
+      expect(part.shellThicknessMm).toBe(2.5);
+      expect(part.draftRequirementDeg).toBe(3.0);
+      expect(part.isStructural).toBe(false);
+    });
+
+    it("rejects part for non-existent revision", async () => {
+      await expect(
+        store.createPartDefinition({
+          partId: `part_test_${Date.now()}`,
+          projectId: "proj_x",
+          revisionId: "rev_nonexistent",
+          partCode: "X1",
+          displayName: "Orphan",
+          partFamily: "test",
+          splitStrategy: "manual",
+          createdBy: "test-user",
+        }),
+      ).rejects.toThrow(/not found/i);
+    });
+
+    it("lists part definitions for a revision", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      await store.createPartDefinition({
+        partId: `part_list_${Date.now()}`,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        partCode: "C1",
+        displayName: "Listed Part",
+        partFamily: "armor",
+        splitStrategy: "manual",
+        createdBy: "test-user",
+      });
+      const list = await store.listPartDefinitions(revision.revisionId);
+      expect(list.length).toBeGreaterThanOrEqual(1);
+      expect(list.some((p) => p.partCode === "C1")).toBe(true);
+    });
+
+    it("gets a single part definition", async () => {
+      const { project, revision } = await createProjectAndRevision();
+      const partId = `part_get_${Date.now()}`;
+      await store.createPartDefinition({
+        partId,
+        projectId: project.projectId,
+        revisionId: revision.revisionId,
+        partCode: "D1",
+        displayName: "Fetchable Part",
+        partFamily: "frame",
+        splitStrategy: "rule",
+        createdBy: "test-user",
+      });
+      const fetched = await store.getPartDefinition(revision.revisionId, partId);
+      expect(fetched).toBeDefined();
+      expect(fetched!.displayName).toBe("Fetchable Part");
+    });
+
+    it("returns undefined for non-existent part", async () => {
+      const { revision } = await createProjectAndRevision();
+      const p = await store.getPartDefinition(revision.revisionId, "part_nonexistent");
+      expect(p).toBeUndefined();
+    });
+  });
 }
 
 // ─── in-memory suite ────────────────────────────────────────────────────────
@@ -517,9 +753,10 @@ if (pgUrl) {
 
       await runMigrations(pool);
 
-      // Clean tables before each run for test isolation
       const client = await pool.connect();
       try {
+        await client.query("DELETE FROM part_definitions");
+        await client.query("DELETE FROM assembly_nodes");
         await client.query("DELETE FROM import_diagnostics");
         await client.query("DELETE FROM import_jobs");
         await client.query("DELETE FROM source_geometries");
